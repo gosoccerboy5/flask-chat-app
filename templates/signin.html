@@ -1,0 +1,16 @@
+<head>
+  <link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"/>
+  <link rel="icon" href="{{ url_for('static',filename='troll.webp') }}"/>
+  <title>Login/sign up</title>
+</head>
+<body>
+  <h1>Login or sign up</h1>
+  <input id="username" placeholder="Username"/>
+  <br>
+  <input id="password" type="password" placeholder="Password"/>
+  <br>
+  <button id="login">Login!</button>  <button id="signup">Sign up</button>
+  <br>
+  <a href="/">Back home</a>
+  <script src="{{ url_for('static',filename='signin.js') }}"></script>
+</body>

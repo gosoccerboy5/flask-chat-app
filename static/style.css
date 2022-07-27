@@ -1,0 +1,95 @@
+body {
+  font-family: Helvetica Neue, sans-serif;
+  background-color: beige;
+}
+h1, h2 {
+  font-weight: 500;
+}
+a {
+  color: #1aa0d8;
+  text-decoration: none;
+}
+a:active {
+  color: red;
+}
+a:hover {
+  text-decoration: underline;
+}
+.center {
+  margin: -8px;
+  display: flex;
+  justify-content: center;
+  position: fixed;
+  bottom: 1%;
+  width: 100%;
+  background-color: #a9a9a9;
+}
+#input {
+  width: 70%;
+  padding: 5px;
+  margin: 10px;
+}
+input {
+  border-radius: 5px;
+}
+input:focus {
+  outline: none;
+  border: 2px solid lightgreen;
+}
+#btn {
+  padding: 5px;
+  margin: 10px;
+}
+.message {
+  background-color: #bcffbf;
+  border-radius: 10px;
+  padding: 10px;
+  margin: 10px;
+}
+#msgs {
+  margin-bottom: 50px;
+}
+header {
+  background-color: cornflowerblue;
+  margin: -8px;
+  padding: 15px;
+  font-size: large;
+  user-select: none;
+  position: fixed;
+  width: 100%;
+}
+header a {
+  padding-top: 15px;
+  padding-bottom: 15px;
+  padding-right: 5px;
+  padding-left: 5px;
+  transition-duration: .5s;
+  text-decoration: none;
+  color: black;
+}
+header a:hover {
+  background-color: #407fee;
+  transition-duration: .5s;
+  text-decoration: none;
+}
+#signedininfo {
+	font-size: small;
+	float: right;
+	margin-right: 5%;
+}
+.err, .success {
+  border-radius: 10px;
+  padding: 5px;
+  margin: 5px;
+  width: fit-content;
+}
+.err {
+  background-color: salmon;
+}
+.success {
+  background-color: greenyellow;
+}
+.err .close, .success .close {
+  cursor: pointer;
+  margin-left: 20px;
+}
