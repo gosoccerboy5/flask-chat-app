@@ -15,6 +15,11 @@ a:active {
 a:hover {
   text-decoration: underline;
 }
+b a {
+  text-decoration: none !important;
+  color: black !important;
+  cursor: pointer !important;
+}
 .center {
   margin: -8px;
   display: flex;
@@ -73,7 +78,6 @@ header a:hover {
   text-decoration: none;
 }
 #signedininfo {
-	font-size: small;
 	float: right;
 	margin-right: 5%;
 }
@@ -92,4 +96,30 @@ header a:hover {
 .err .close, .success .close {
   cursor: pointer;
   margin-left: 20px;
+}
+.channel {
+  border-radius: 10px;
+  margin: 5px;
+  background-color: greenyellow;
+  margin: auto;
+  width: 95%;
+  padding: 10px;
+  cursor: pointer;
+  margin-bottom: 5px;
+}
+.lastpost {
+  float: right;
+}
+#addChannelBtn {
+	float: right;
+	right: 5%;
+	position: absolute;
+	top: 10%;
+	padding-top: 5;
+	background: lightblue;
+	border-radius: 10px;
+	padding-bottom: 5px;
+	padding-right: 10px;
+	padding-left: 10px;
+	cursor: pointer;
 }

@@ -1,0 +1,18 @@
+<!DOCTYPE HTML>
+<head>
+  <title>Settings</title>
+  <link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}" />
+  <link rel="icon" href="{{ url_for('static',filename='troll.webp') }}" />
+</head>
+<body>
+  <header>
+    <a href="/">Home</a>
+  </header>
+  <br>
+  <br>
+  <h1>Settings</h1>
+  <textarea id="bio" placeholder="Bio here..."></textarea>
+  <br>
+  <button id="submit">Save preferences</button>
+  <script src="{{ url_for('static',filename='settings.js') }}"></script>
+</body>

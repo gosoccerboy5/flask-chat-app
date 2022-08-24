@@ -1,0 +1,21 @@
+<head>
+  <title>Chat App by gosoccerboy5</title>
+  <link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}" />
+  <link rel="icon" href="{{ url_for('static',filename='troll.webp') }}" />
+</head>
+<body>
+  <header id="header">Welcome to {{channel_name}} <a href="/signin">Login/sign up</a><a href="/">Home</a><span id="signedininfo">You are not signed in.</span></header>
+  <br>
+  <br>
+  <div id="msgs"></div>
+  <div id="input-box" class="center">
+    <input id="input"/>
+    <button id="btn">Submit!</button>
+  </div>
+  <script>
+    const channelId = "{{channel_id}}";
+    const channelName = "{{channel_name}}";
+    document.title = channelName + " - Chat App (by gosoccerboy5)";
+  </script>
+  <script src="{{url_for('static',filename='chat.js') }}"></script>
+</body>

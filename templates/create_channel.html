@@ -1,0 +1,12 @@
+<head>
+  <title>Create Channel - Chat App</title>
+  <link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}" />
+  <link rel="icon" href="{{ url_for('static',filename='troll.webp') }}" />
+</head>
+<body>
+  <header id="header"><a href="/signin">Login/sign up</a><a href="/">Home</a><span id="signedininfo">You are not signed in.</span></header>
+  <br><br><br>
+  <input id="title" placeholder="Channel name here...">
+  <button id="submit">Submit!</button>
+  <script src="{{ url_for('static',filename='create_channel.js') }}"></script>
+</body>

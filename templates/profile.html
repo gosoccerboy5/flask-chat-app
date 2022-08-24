@@ -1,0 +1,15 @@
+<!DOCTYPE HTML>
+<head>
+  <title>{{username}} - Chat App</title>
+  <link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}" />
+  <link rel="icon" href="{{ url_for('static',filename='troll.webp') }}" />
+</head>
+<body>
+  <header>
+    <a href="/">Home</a>
+  </header>
+  <br>
+  <br>
+  <h1>Welcome to @{{username}}'s profile</h1>
+  <p><b>Bio:</b><br>{{bio}}</p>
+</body>
