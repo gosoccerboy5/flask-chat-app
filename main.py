@@ -1,6 +1,7 @@
 import random, string, json, hashlib, re
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime, timezone
+from collections import defaultdict
 
 def get_date():
   return re.sub(r"\.\d+.*$", " UTC", str(datetime.now(timezone.utc)))
@@ -19,6 +20,11 @@ def get_channel_data():
   data = json.loads(file.read())
   file.close()
   return data
+
+chatcount = defaultdict(lambda: 1)
+channel_data = get_channel_data()
+for channel in channel_data.keys():
+  chatcount[channel] = len(channel_data[channel]["messages"])
 
 app = Flask(  # Create a flask app
 	__name__,
@@ -60,9 +66,9 @@ def get_channel(channel):
   return render_template("channel.html", channel_id=channel,channel_name=get_channel_data()[channel]["name"])
 
 @app.route('/chatcount/<channel>')
-def chatcount(channel):
+def getchatcount(channel):
   return jsonify({
-    "count": str(len(get_channel_data()[channel]["messages"]))
+    "count": chatcount[channel]
   })
 
 @app.route('/createchannel', methods=['GET', 'POST'])
@@ -88,9 +94,8 @@ def createchannel():
     "name": title, 
     "messages": [{"username": "Channel-Bot", "content": "Channel created by " + username, "date": get_date()}]
   }
-  write_data = open("channels.json", "w")
-  write_data.write(json.dumps(channel_data))
-  write_data.close()
+  with open("channels.json", "w") as w:
+    w.write(json.dumps(channel_data))
   return jsonify({"status": "Success", "message": id})
 
 @app.route('/postmessage', methods=['POST'])
@@ -111,9 +116,9 @@ def postmessage():
     "content": rq_json["content"],
     "date": get_date()
   })
-  write_file = open("channels.json", "w")
-  write_file.write(json.dumps(current_channels_data))
-  write_file.close()
+  chatcount[rq_json["channelId"]] += 1
+  with open("channels.json", "w") as w:
+    w.write(json.dumps(current_channels_data))
   return "Success"
 
 @app.route('/login', methods=['POST'])
@@ -137,13 +142,12 @@ def signup():
     return "Error: Signup failure: username already exists"
   if not re.compile("^[\w-]{3,20}$").fullmatch(username):
     return "Error: Signup failure: username not valid (must consist of letters, numbers, - and _ and must be between 3 and 20 characters"
-  write_file = open("user_data.json", "w")
   all_user_data[username] = {
     "pwhash": sha256(password),
     "bio": ""
   }
-  write_file.write(json.dumps(all_user_data))
-  write_file.close()
+  with open("user_data.json", "w") as w:
+    w.write(json.dumps(all_user_data))
   return "Success"
 
 @app.route('/settings')
@@ -151,7 +155,7 @@ def settingspage():
   return render_template('settings.html')
 
 @app.route('/user_data', methods=['GET'])
-def getbios():
+def get_individual_data():
   data = get_user_data()[request.args["user"]]
   return jsonify({
     "bio": data["bio"]
@@ -179,9 +183,8 @@ def set_settings():
   if all_user_data[username]["pwhash"] != pwhash:
     return "Error: password incorrect (cannot verify profile)"
   all_user_data[username]["bio"] = bio
-  write_file = open("user_data.json", "w")
-  write_file.write(json.dumps(all_user_data))
-  write_file.close()
+  with open("user_data.json", "w") as w:
+    w.write(json.dumps(all_user_data))
   return "Success"
   
 if __name__ == "__main__":  # Makes sure this is the main process
