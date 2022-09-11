@@ -1,7 +1,16 @@
-import random, string, json, hashlib, re
+import random, string, json, hashlib, re, os
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime, timezone
 from collections import defaultdict
+import sqlite3
+import tables
+
+def execute(query, db):
+  connection = sqlite3.connect(db)
+  cursor = connection.execute(db)
+  connection.commit()
+  connection.close()
+  return cursor.fetchall()
 
 def get_date():
   return re.sub(r"\.\d+.*$", " UTC", str(datetime.now(timezone.utc)))
@@ -34,7 +43,7 @@ app = Flask(  # Create a flask app
 
 ok_chars = string.ascii_letters + string.digits
 
-@app.route('/', methods=['GET', 'POST'])  # What happens when the user visits the site
+@app.route('/')  # What happens when the user visits the site
 def base_page():
   return render_template('base.html')
 
