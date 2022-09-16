@@ -1,16 +1,8 @@
-import random, string, json, hashlib, re, os
+import random, string, json, hashlib, re, os, sqlite3
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime, timezone
 from collections import defaultdict
-import sqlite3
-import tables
-
-def execute(query, db):
-  connection = sqlite3.connect(db)
-  cursor = connection.execute(db)
-  connection.commit()
-  connection.close()
-  return cursor.fetchall()
+from flask_sock import Sock
 
 def get_date():
   return re.sub(r"\.\d+.*$", " UTC", str(datetime.now(timezone.utc)))
@@ -18,11 +10,15 @@ def get_date():
 def sha256(text):
   return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
-def get_user_data():
-  file = open("user_data.json")
-  data = json.loads(file.read())
-  file.close()
-  return data
+def get_user_data(username=None):
+  connection = sqlite3.connect("user_data.db")
+  user_data = None
+  if username is not None:
+    user_data = connection.execute("SELECT * FROM users WHERE username = ?;", (username, )).fetchone()
+  else:
+    user_data = connection.execute("SELECT * FROM users;").fetchall()
+  connection.close()
+  return user_data
   
 def get_channel_data():
   file = open("channels.json")
@@ -40,6 +36,29 @@ app = Flask(  # Create a flask app
 	template_folder='templates',  # Name of html file folder
 	static_folder='static'  # Name of directory for static files
 )
+
+socket = Sock(app)
+
+sockets = []
+
+@socket.route("/channelws")
+def channelws(sock):
+  metadata = json.loads(sock.receive())
+  sockets.append((sock, metadata))
+  while True:
+    data = json.loads(sock.receive())
+    data["date"] = get_date()
+    post_message(data, metadata["channel"])
+    data = json.dumps(data)
+    for pair in sockets:
+      if pair[1]["channel"] == metadata["channel"]:
+        pair[0].send(data)
+
+def post_message(msg, channel):
+  data = get_channel_data()
+  data[str(channel)]["messages"].append(msg)
+  with open("channels.json", "w") as w:
+    w.write(json.dumps(data))
 
 ok_chars = string.ascii_letters + string.digits
 
@@ -110,13 +129,13 @@ def createchannel():
 @app.route('/postmessage', methods=['POST'])
 def postmessage():
   current_channels_data = get_channel_data()
-  user_data = get_user_data()
   rq_json = request.get_json()
   usr = rq_json["username"]
   pw = rq_json["password"]
-  if not usr in user_data:
+  user_data = get_user_data(usr)
+  if user_data == None:
     return "Error: Message failed: username not recognized"
-  if user_data[usr]["pwhash"] != sha256(pw):
+  if user_data[1] != sha256(pw):
     return "Error: Message failed: wrong password for account"
   if not rq_json["channelId"] in current_channels_data:
     return "Error: Message failed: channel does not exist"
@@ -132,31 +151,27 @@ def postmessage():
 
 @app.route('/login', methods=['POST'])
 def login():
-  all_user_data = get_user_data()
-  login_data = request.get_json()
-  if not login_data["username"] in all_user_data:
+  rq_json = request.get_json()
+  login_data = get_user_data(rq_json["username"])
+  if login_data == None:
     return "Error: Login failure: username not found"
-  
-  if sha256(login_data["password"]) != all_user_data[login_data["username"]]["pwhash"]:
+  if sha256(rq_json["password"]) != login_data[1]:
     return "Error: Login failure: password incorrect"
   return "Success"
 
 @app.route('/signup', methods=['POST'])
 def signup():
-  all_user_data = get_user_data()
   signup_data = request.get_json()
   username = signup_data["username"]
   password = signup_data["password"]
-  if username in all_user_data:
+  if get_user_data(username) is not None:
     return "Error: Signup failure: username already exists"
   if not re.compile("^[\w-]{3,20}$").fullmatch(username):
     return "Error: Signup failure: username not valid (must consist of letters, numbers, - and _ and must be between 3 and 20 characters"
-  all_user_data[username] = {
-    "pwhash": sha256(password),
-    "bio": ""
-  }
-  with open("user_data.json", "w") as w:
-    w.write(json.dumps(all_user_data))
+  connection = sqlite3.connect("user_data.db")
+  connection.execute("INSERT INTO users VALUES (?, ?, '');", (username, sha256(password)))
+  connection.commit()
+  connection.close()
   return "Success"
 
 @app.route('/settings')
@@ -165,19 +180,18 @@ def settingspage():
 
 @app.route('/user_data', methods=['GET'])
 def get_individual_data():
-  data = get_user_data()[request.args["user"]]
+  data = get_user_data(request.args["user"])
   return jsonify({
-    "bio": data["bio"]
+    "bio": data[2]
   })
 
 @app.route('/profile', methods=['GET'])
 def profile():
-  user_data = get_user_data()
   name = request.args["user"]
-  if not name in user_data:
+  data = get_user_data(name)
+  if data == None:
     return "User not found"
-  data = user_data[name]
-  return render_template('profile.html', username=name, bio=data["bio"] if data["bio"] != "" else "None given.")
+  return render_template('profile.html', username=name, bio=data[2] if data[2] != "" else "None given.")
 
 @app.route('/set_settings', methods=['POST'])
 def set_settings():
@@ -186,15 +200,19 @@ def set_settings():
   pwhash = sha256(rq_json["password"])
   bio = rq_json["bio"]
 
-  all_user_data = get_user_data()
-  if not username in all_user_data:
+  if get_user_data(username) == None:
     return "Error: username does not exist"
-  if all_user_data[username]["pwhash"] != pwhash:
+  if get_user_data(username)[1] != pwhash:
     return "Error: password incorrect (cannot verify profile)"
-  all_user_data[username]["bio"] = bio
-  with open("user_data.json", "w") as w:
-    w.write(json.dumps(all_user_data))
+  connection = sqlite3.connect("user_data.db")
+  connection.execute("UPDATE users SET bio = ? WHERE username = ?", (bio, username))
+  connection.commit()
+  connection.close()
   return "Success"
+  
+@app.route("/all_user_data")
+def jwefjwefjiofewoijwef():
+  return jsonify([list(datum) for datum in get_user_data()])
   
 if __name__ == "__main__":  # Makes sure this is the main process
 	app.run( # Starts the site

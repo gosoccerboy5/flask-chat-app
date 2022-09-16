@@ -48,7 +48,7 @@ function submit() {
   if (localStorage.getItem("username") === null) {
     $("#msgs").append(errorBox("You are not signed in. Head over to the login page to sign up or login."));
     return;
-  }
+  }/*
   const body = JSON.stringify({
     content: input.value,
     username: localStorage.getItem("username"),
@@ -73,9 +73,10 @@ function submit() {
   })
   .catch((error) => {
     console.error('Error:', error);
-  });
+  });*/
   canSubmit = false;
   setTimeout(() => canSubmit = true, 200);
+  window.ws.send(JSON.stringify({"username": localStorage.getItem("username"), content: input.value}));
 }
 
 btn.addEventListener("click", submit);
@@ -98,7 +99,7 @@ fetch('/messages/' + channelId)
   .then(() => {
     window.scrollTo({left: 0, top: document.body.scrollHeight, behavior: "smooth"});
   })
-  .then(() => window.setInterval(updateMsgs, 1000));
+  .then(() => window.setInterval(console.log, 1000));
 
 
 function updateMsgs(own = false) {
@@ -126,3 +127,19 @@ function updateMsgs(own = false) {
       }
     });
 }
+
+
+window.addEventListener("load", function() {
+  channelNum = Number(location.href.match(/\d+$/)[0]);
+  window.ws = new WebSocket("wss://" + location.host + "/channelws");
+  ws.addEventListener("open", function(event) {
+    ws.send(JSON.stringify({
+      channel: channelNum,
+    }));
+  });
+  ws.addEventListener("message", function(event) {
+    let postData = JSON.parse(event.data);
+    msgsEl.append(postTemplate(postData.username, postData.content, postData.date));
+    console.log(event.data);
+  });
+});

@@ -117,12 +117,32 @@ async = ["asgiref (>=3.2)"]
 dotenv = ["python-dotenv"]
 
 [[package]]
+name = "flask-sock"
+version = "0.5.2"
+description = "WebSocket support for Flask"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+flask = ">=2"
+simple-websocket = ">=0.5.1"
+
+[[package]]
 name = "frozenlist"
 version = "1.3.0"
 description = "A list-like structure which implements collections.abc.MutableSequence"
 category = "main"
 optional = false
 python-versions = ">=3.7"
+
+[[package]]
+name = "h11"
+version = "0.13.0"
+description = "A pure-Python, bring-your-own-I/O implementation of HTTP/1.1"
+category = "main"
+optional = false
+python-versions = ">=3.6"
 
 [[package]]
 name = "idna"
@@ -301,6 +321,17 @@ socks = ["PySocks (>=1.5.6,!=1.5.7)"]
 use_chardet_on_py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
+name = "simple-websocket"
+version = "0.8.1"
+description = "Simple WebSocket server and client for Python"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+wsproto = "*"
+
+[[package]]
 name = "typing-extensions"
 version = "3.10.0.2"
 description = "Backported and Experimental Type Hints for Python 3.5+"
@@ -344,6 +375,17 @@ MarkupSafe = ">=2.1.1"
 watchdog = ["watchdog"]
 
 [[package]]
+name = "wsproto"
+version = "1.2.0"
+description = "WebSockets state-machine based protocol implementation"
+category = "main"
+optional = false
+python-versions = ">=3.7.0"
+
+[package.dependencies]
+h11 = ">=0.9.0,<1"
+
+[[package]]
 name = "yarl"
 version = "1.7.2"
 description = "Yet another URL library"
@@ -370,7 +412,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8.0,<3.9"
-content-hash = "c8f67a04f537ccb7f4995c7266ea2e31b8c37c6dafd485ab690ffc83405d052d"
+content-hash = "5f466a76885af6d364d11085fbbe87febb0fb7a8ae072779ec05d07ac82c79cd"
 
 [metadata.files]
 aiohttp = []
@@ -383,7 +425,9 @@ click = []
 colorama = []
 debugpy = []
 flask = []
+flask-sock = []
 frozenlist = []
+h11 = []
 idna = []
 importlib-metadata = []
 itsdangerous = []
@@ -397,9 +441,11 @@ python-lsp-jsonrpc = []
 python-lsp-server = []
 replit = []
 requests = []
+simple-websocket = []
 typing-extensions = []
 ujson = []
 urllib3 = []
 werkzeug = []
+wsproto = []
 yarl = []
 zipp = []
