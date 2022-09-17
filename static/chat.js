@@ -31,7 +31,6 @@ if (localStorage.getItem("username") !== null) {
   $("#signedininfo").innerHTML = "<a href='/settings'>You are signed in as " + localStorage.getItem("username") + ".</a>";
 }
 
-
 const btn = $("#btn");
 const input = $("#input");
 
@@ -48,35 +47,11 @@ function submit() {
   if (localStorage.getItem("username") === null) {
     $("#msgs").append(errorBox("You are not signed in. Head over to the login page to sign up or login."));
     return;
-  }/*
-  const body = JSON.stringify({
-    content: input.value,
-    username: localStorage.getItem("username"),
-    password: localStorage.getItem("password"),
-    channelId,
-  });
-  fetch('/postmessage', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body,
-  })
-  .then(res => res.text())
-  .then((res) => {
-    if (res !== "Success") {
-      $("#msgs").append(errorBox(res));
-    } else {
-      updateMsgs(true);
-      input.value = "";
-    }
-  })
-  .catch((error) => {
-    console.error('Error:', error);
-  });*/
+  }
   canSubmit = false;
   setTimeout(() => canSubmit = true, 200);
   window.ws.send(JSON.stringify({"username": localStorage.getItem("username"), content: input.value}));
+  input.value = "";
 }
 
 btn.addEventListener("click", submit);
@@ -98,35 +73,7 @@ fetch('/messages/' + channelId)
   }))
   .then(() => {
     window.scrollTo({left: 0, top: document.body.scrollHeight, behavior: "smooth"});
-  })
-  .then(() => window.setInterval(console.log, 1000));
-
-
-function updateMsgs(own = false) {
-  fetch('/chatcount/' + channelId)
-    .then(res => res.json())
-    .then(res => res["count"])
-    .then(count => {
-      if (msgs.length < count) {
-        fetch('/messages/' + channelId)
-          .then(res => res.json())
-          .then(allmsgs => {
-            const nearBottom = document.documentElement.scrollHeight - document.body.scrollTop < 1000;
-            const newMsgs = allmsgs.slice(msgs.length);
-            newMsgs.forEach(msg => {
-              msgsEl.append(
-                postTemplate(msg.username, msg.content, msg.date));
-            });
-            msgs = allmsgs;
-            if (!nearBottom && newMsgs.some(msg => msg.username !== localStorage.getItem("username"))) {
-              newMessageBox();
-            } else {
-              window.scrollTo({left: 0, top: document.body.scrollHeight, behavior: "smooth"});
-            }
-          });
-      }
-    });
-}
+  });
 
 
 window.addEventListener("load", function() {
@@ -135,11 +82,18 @@ window.addEventListener("load", function() {
   ws.addEventListener("open", function(event) {
     ws.send(JSON.stringify({
       channel: channelNum,
+      username: localStorage.getItem("username"),
+      password: localStorage.getItem("password")
     }));
   });
   ws.addEventListener("message", function(event) {
     let postData = JSON.parse(event.data);
     msgsEl.append(postTemplate(postData.username, postData.content, postData.date));
-    console.log(event.data);
+    const nearBottom = document.documentElement.scrollHeight - document.body.scrollTop < 1000;
+    if (!nearBottom && postData.username !== localStorage.getItem("username")) {
+      newMessageBox();
+    } else {
+      window.scrollTo({left: 0, top: document.body.scrollHeight, behavior: "smooth"});
+    }
   });
 });

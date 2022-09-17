@@ -26,6 +26,10 @@ def get_channel_data():
   file.close()
   return data
 
+def verify_user(username, hash):
+  data = get_user_data(username)
+  return data is not None and data[1] == hash
+
 chatcount = defaultdict(lambda: 1)
 channel_data = get_channel_data()
 for channel in channel_data.keys():
@@ -38,22 +42,35 @@ app = Flask(  # Create a flask app
 )
 
 socket = Sock(app)
-
 sockets = []
 
 @socket.route("/channelws")
 def channelws(sock):
-  metadata = json.loads(sock.receive())
-  sockets.append((sock, metadata))
-  while True:
-    data = json.loads(sock.receive())
-    data["date"] = get_date()
-    post_message(data, metadata["channel"])
-    data = json.dumps(data)
-    for pair in sockets:
-      if pair[1]["channel"] == metadata["channel"]:
-        pair[0].send(data)
+  do_run = True
+  
+  md = json.loads(sock.receive()) #metadata
+  mypair = (sock, {"channel": md["channel"]})
+  sockets.append(mypair)
 
+  if not verify_user(md["username"] or "", sha256(md["password"] or "")):
+    do_run = False
+  
+  while True:
+    try:
+      data = json.loads(sock.receive())
+      if not do_run:
+        continue
+      data["date"] = get_date()
+      post_message(data, md["channel"])
+      data = json.dumps(data)
+      for pair in sockets:
+        if pair[1]["channel"] == md["channel"]:
+          pair[0].send(data)
+    except Exception as e:
+      print(e)
+      sockets.remove(mypair)
+      return
+      
 def post_message(msg, channel):
   data = get_channel_data()
   data[str(channel)]["messages"].append(msg)
@@ -209,10 +226,6 @@ def set_settings():
   connection.commit()
   connection.close()
   return "Success"
-  
-@app.route("/all_user_data")
-def jwefjwefjiofewoijwef():
-  return jsonify([list(datum) for datum in get_user_data()])
   
 if __name__ == "__main__":  # Makes sure this is the main process
 	app.run( # Starts the site
