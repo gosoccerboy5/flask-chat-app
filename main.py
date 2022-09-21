@@ -79,15 +79,15 @@ def post_message(msg, channel):
 
 ok_chars = string.ascii_letters + string.digits
 
-@app.route('/')  # What happens when the user visits the site
+@app.get('/')  # What happens when the user visits the site
 def base_page():
   return render_template('base.html')
 
-@app.route('/signin')
+@app.get('/signin')
 def signinpage():
   return render_template('signin.html')
 
-@app.route('/channels')
+@app.get('/channels')
 def channels_sorted():
   channels = get_channel_data()
   res = []
@@ -100,17 +100,17 @@ def channels_sorted():
     })
   return jsonify(res)
 
-@app.route('/messages/<id>', methods=['GET', 'POST'])
+@app.get('/messages/<id>')
 def messages(id):
   all_channel_data = get_channel_data()
   channel_data = all_channel_data[id]
   return jsonify(channel_data["messages"])
 
-@app.route('/channel/<channel>')
+@app.get('/channel/<channel>')
 def get_channel(channel):
   return render_template("channel.html", channel_id=channel,channel_name=get_channel_data()[channel]["name"])
 
-@app.route('/chatcount/<channel>')
+@app.get('/chatcount/<channel>')
 def getchatcount(channel):
   return jsonify({
     "count": chatcount[channel]
@@ -126,10 +126,10 @@ def createchannel():
     return jsonify({"status": "Error", "message": "Error: must have a title"})
   username = rq_json["username"]
   pw = rq_json["password"]
-  user_data = get_user_data()
-  if not username in user_data:
+  user_data = get_user_data(username)
+  if user_data == None:
     return jsonify({"status": "Error", "message": "Error: not signed in or user not found"})
-  if sha256(pw) != user_data[username]["pwhash"]:
+  if sha256(pw) != user_data[1]:
     return jsonify({"status": "Error", "message": "Error: Password incorrect, cannot verify user"})
   channel_data = get_channel_data()
   id = str(random.randint(0, 100000))
@@ -143,30 +143,7 @@ def createchannel():
     w.write(json.dumps(channel_data))
   return jsonify({"status": "Success", "message": id})
 
-@app.route('/postmessage', methods=['POST'])
-def postmessage():
-  current_channels_data = get_channel_data()
-  rq_json = request.get_json()
-  usr = rq_json["username"]
-  pw = rq_json["password"]
-  user_data = get_user_data(usr)
-  if user_data == None:
-    return "Error: Message failed: username not recognized"
-  if user_data[1] != sha256(pw):
-    return "Error: Message failed: wrong password for account"
-  if not rq_json["channelId"] in current_channels_data:
-    return "Error: Message failed: channel does not exist"
-  current_channels_data[rq_json["channelId"]]["messages"].append({
-    "username": usr,
-    "content": rq_json["content"],
-    "date": get_date()
-  })
-  chatcount[rq_json["channelId"]] += 1
-  with open("channels.json", "w") as w:
-    w.write(json.dumps(current_channels_data))
-  return "Success"
-
-@app.route('/login', methods=['POST'])
+@app.post('/login')
 def login():
   rq_json = request.get_json()
   login_data = get_user_data(rq_json["username"])
@@ -176,7 +153,7 @@ def login():
     return "Error: Login failure: password incorrect"
   return "Success"
 
-@app.route('/signup', methods=['POST'])
+@app.post('/signup')
 def signup():
   signup_data = request.get_json()
   username = signup_data["username"]
@@ -191,18 +168,20 @@ def signup():
   connection.close()
   return "Success"
 
-@app.route('/settings')
+@app.get('/settings')
 def settingspage():
   return render_template('settings.html')
 
-@app.route('/user_data', methods=['GET'])
+@app.get('/user_data')
 def get_individual_data():
   data = get_user_data(request.args["user"])
+  if data == None:
+    return jsonify({})
   return jsonify({
     "bio": data[2]
   })
 
-@app.route('/profile', methods=['GET'])
+@app.get('/profile')
 def profile():
   name = request.args["user"]
   data = get_user_data(name)
@@ -210,7 +189,7 @@ def profile():
     return "User not found"
   return render_template('profile.html', username=name, bio=data[2] if data[2] != "" else "None given.")
 
-@app.route('/set_settings', methods=['POST'])
+@app.post('/set_settings')
 def set_settings():
   rq_json = request.get_json()
   username = rq_json["username"]
