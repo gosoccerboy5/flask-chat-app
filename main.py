@@ -1,12 +1,12 @@
 import random, string, json, hashlib, re, os, sqlite3
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime, timezone
-from collections import defaultdict
 from flask_sock import Sock
+import tables
 
 def get_date():
   return re.sub(r"\.\d+.*$", " UTC", str(datetime.now(timezone.utc)))
-  
+
 def sha256(text):
   return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
@@ -20,20 +20,16 @@ def get_user_data(username=None):
   connection.close()
   return user_data
   
-def get_channel_data():
-  file = open("channels.json")
-  data = json.loads(file.read())
-  file.close()
-  return data
+def get_channel_data(id):
+  id = str(id)
+  connection = sqlite3.connect("channel_data.db")
+  channel_data = connection.execute("SELECT ch.id, ch.name, co.content, co.date, co.author, co.id AS commentid FROM channels ch JOIN comments co ON ch.id = co.channel WHERE ch.id = ?;", (id, )).fetchall()
+  connection.close()
+  return channel_data
 
 def verify_user(username, hash):
   data = get_user_data(username)
   return data is not None and data[1] == hash
-
-chatcount = defaultdict(lambda: 1)
-channel_data = get_channel_data()
-for channel in channel_data.keys():
-  chatcount[channel] = len(channel_data[channel]["messages"])
 
 app = Flask(  # Create a flask app
 	__name__,
@@ -72,10 +68,11 @@ def channelws(sock):
       return
       
 def post_message(msg, channel):
-  data = get_channel_data()
-  data[str(channel)]["messages"].append(msg)
-  with open("channels.json", "w") as w:
-    w.write(json.dumps(data))
+  connection = sqlite3.connect("channel_data.db")
+  count = int(connection.execute("SELECT COUNT(*) FROM comments;").fetchone()[0])
+  connection.execute("INSERT INTO comments VALUES (?, ?, ?, ?, ?);", (str(count+1), str(channel), msg["content"], msg["username"], get_date()))
+  connection.commit()
+  connection.close()
 
 ok_chars = string.ascii_letters + string.digits
 
@@ -89,32 +86,23 @@ def signinpage():
 
 @app.get('/channels')
 def channels_sorted():
-  channels = get_channel_data()
-  res = []
-  for key, value in channels.items():
-    last_post = value["messages"][-1] if len(value["messages"]) > 0 else None
-    res.append({
-      "name": value["name"],
-      "id": key,
-      "last_post": last_post
-    })
-  return jsonify(res)
+  connection = sqlite3.connect("channel_data.db")
+  data = connection.execute("SELECT * FROM channels").fetchall()
+  data = [{"id": row[0], "name": row[1], "founder": row[2]} for row in data]
+  connection.close()
+  return jsonify(data)
 
 @app.get('/messages/<id>')
 def messages(id):
-  all_channel_data = get_channel_data()
-  channel_data = all_channel_data[id]
-  return jsonify(channel_data["messages"])
+  data = get_channel_data(id)
+  c = sqlite3.connect("channel_data.db")
+  title = c.execute("SELECT name FROM channels WHERE id = ?", (id, )).fetchone()[0]
+  c.close()
+  return {"title": title, "messages": [{"username": row[4], "content": row[2], "date": row[3]} for row in data]}
 
 @app.get('/channel/<channel>')
 def get_channel(channel):
-  return render_template("channel.html", channel_id=channel,channel_name=get_channel_data()[channel]["name"])
-
-@app.get('/chatcount/<channel>')
-def getchatcount(channel):
-  return jsonify({
-    "count": chatcount[channel]
-  })
+  return render_template("channel.html")
 
 @app.route('/createchannel', methods=['GET', 'POST'])
 def createchannel():
@@ -131,16 +119,16 @@ def createchannel():
     return jsonify({"status": "Error", "message": "Error: not signed in or user not found"})
   if sha256(pw) != user_data[1]:
     return jsonify({"status": "Error", "message": "Error: Password incorrect, cannot verify user"})
-  channel_data = get_channel_data()
+
+  connection = sqlite3.connect("channel_data.db")
+  ids = [row[0] for row in connection.execute("SELECT id FROM channels;").fetchall()]
   id = str(random.randint(0, 100000))
-  while id in channel_data:
+  while id in ids:
     id = str(random.randint(0, 100000))
-  channel_data[id] = {
-    "name": title, 
-    "messages": [{"username": "Channel-Bot", "content": "Channel created by " + username, "date": get_date()}]
-  }
-  with open("channels.json", "w") as w:
-    w.write(json.dumps(channel_data))
+  connection.execute("INSERT INTO channels VALUES (?, ?, ?);", (id, title, username))
+  connection.commit()
+  connection.close()
+  
   return jsonify({"status": "Success", "message": id})
 
 @app.post('/login')

@@ -7,11 +7,11 @@ function createChannelEl(obj) {
     window.location.href = "/channel/" + obj.id;
   });
   newEl.innerText = obj.name;
-  lastPost = document.createElement("span");
+  /*lastPost = document.createElement("span");
   lastPost.className = "lastpost";
   lastPost.innerText = "Last post by " + obj.last_post.username;
   lastPost.title = obj.last_post.date;
-  newEl.append(lastPost);
+  newEl.append(lastPost);*/
   return newEl;
 }
 

@@ -1,3 +1,5 @@
+document.title = "Chat App (by gosoccerboy5)";
+channelId = location.href.match(/\d+$/)[0];
 const $ = document.querySelector.bind(document);
 
 function postTemplate(username, content, date) {
@@ -41,9 +43,7 @@ function submit() {
     $("#msgs").append(errorBox("Woah there, looks like you're chatting a little fast. Wait a little bit longer before posting each message."));
     return;
   }
-  if (input.value.trim() === "") {
-    return;
-  }
+  if (input.value.trim() === "") return;
   if (localStorage.getItem("username") === null) {
     $("#msgs").append(errorBox("You are not signed in. Head over to the login page to sign up or login."));
     return;
@@ -62,11 +62,14 @@ input.addEventListener("keydown", (evt) => {
 });
 
 var msgs = [];
-
 const msgsEl = $("#msgs");
 fetch('/messages/' + channelId)
   .then(res => res.json())
-  .then(res => msgs = res)
+  .then(res => {
+    document.title = res.title + " - " + document.title;
+    document.querySelector("header > span").innerText = "Welcome to " + res.title;
+    return res["messages"];
+  })
   .then(msgs => msgs.forEach(msg => {
     msgsEl.append(
       postTemplate(msg.username, msg.content, msg.date));
