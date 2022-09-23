@@ -19,17 +19,20 @@ def get_user_data(username=None):
     user_data = connection.execute("SELECT * FROM users;").fetchall()
   connection.close()
   return user_data
-  
+
+def is_correct(username, password):
+  hash_w_salt = get_user_data(username)[1]
+  split = hash_w_salt.split(",")
+  hashed = split[0]
+  salt = split[1]
+  return sha256(password + salt) == hashed
+
 def get_channel_data(id):
   id = str(id)
   connection = sqlite3.connect("channel_data.db")
   channel_data = connection.execute("SELECT ch.id, ch.name, co.content, co.date, co.author, co.id AS commentid FROM channels ch JOIN comments co ON ch.id = co.channel WHERE ch.id = ?;", (id, )).fetchall()
   connection.close()
   return channel_data
-
-def verify_user(username, hash):
-  data = get_user_data(username)
-  return data is not None and data[1] == hash
 
 app = Flask(  # Create a flask app
 	__name__,
@@ -48,7 +51,7 @@ def channelws(sock):
   mypair = (sock, {"channel": md["channel"]})
   sockets.append(mypair)
 
-  if not verify_user(md["username"] or "", sha256(md["password"] or "")):
+  if not is_correct(md["username"] or "", md["password"] or ""):
     do_run = False
   
   while True:
@@ -117,7 +120,7 @@ def createchannel():
   user_data = get_user_data(username)
   if user_data == None:
     return jsonify({"status": "Error", "message": "Error: not signed in or user not found"})
-  if sha256(pw) != user_data[1]:
+  if not is_correct(username, pw):
     return jsonify({"status": "Error", "message": "Error: Password incorrect, cannot verify user"})
 
   connection = sqlite3.connect("channel_data.db")
@@ -137,7 +140,7 @@ def login():
   login_data = get_user_data(rq_json["username"])
   if login_data == None:
     return "Error: Login failure: username not found"
-  if sha256(rq_json["password"]) != login_data[1]:
+  if not is_correct(rq_json["username"], rq_json["password"]):
     return "Error: Login failure: password incorrect"
   return "Success"
 
@@ -146,12 +149,13 @@ def signup():
   signup_data = request.get_json()
   username = signup_data["username"]
   password = signup_data["password"]
+  time = datetime.now()
   if get_user_data(username) is not None:
     return "Error: Signup failure: username already exists"
   if not re.compile("^[\w-]{3,20}$").fullmatch(username):
     return "Error: Signup failure: username not valid (must consist of letters, numbers, - and _ and must be between 3 and 20 characters"
   connection = sqlite3.connect("user_data.db")
-  connection.execute("INSERT INTO users VALUES (?, ?, '');", (username, sha256(password)))
+  connection.execute("INSERT INTO users VALUES (?, ?, '');", (username, f"{sha256(password + str(time))},{str(time)}"))
   connection.commit()
   connection.close()
   return "Success"
@@ -181,19 +185,19 @@ def profile():
 def set_settings():
   rq_json = request.get_json()
   username = rq_json["username"]
-  pwhash = sha256(rq_json["password"])
+  pw = rq_json["password"]
   bio = rq_json["bio"]
 
   if get_user_data(username) == None:
     return "Error: username does not exist"
-  if get_user_data(username)[1] != pwhash:
+  if not is_correct(username, pw):
     return "Error: password incorrect (cannot verify profile)"
   connection = sqlite3.connect("user_data.db")
   connection.execute("UPDATE users SET bio = ? WHERE username = ?", (bio, username))
   connection.commit()
   connection.close()
   return "Success"
-  
+
 if __name__ == "__main__":  # Makes sure this is the main process
 	app.run( # Starts the site
 		host='0.0.0.0',  # EStablishes the host, required for repl to detect the site
